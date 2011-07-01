@@ -1,6 +1,6 @@
 = qtato
 
-Description goes here.
+A CouchDB-based Queue in Ruby.
 
 == Contributing to qtato
  

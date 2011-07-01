@@ -18,7 +18,7 @@ Jeweler::Tasks.new do |gem|
   gem.homepage = "http://github.com/eladkehat/qtato"
   gem.license = "MIT"
   gem.summary = %Q{A CouchDB-based Queue in Ruby}
-  gem.description = %Q{TODO: longer description of your gem}
+  #gem.description = %Q{TODO: longer description of your gem}
   gem.email = "eladkehat@gmail.com"
   gem.authors = ["Elad Kehat"]
   # dependencies defined in Gemfile
