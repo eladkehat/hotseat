@@ -14,10 +14,10 @@ require 'rake'
 require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://docs.rubygems.org/read/chapter/20 for more options
-  gem.name = "qtato"
-  gem.homepage = "http://github.com/eladkehat/qtato"
+  gem.name = "hotseat"
+  gem.homepage = "http://github.com/eladkehat/hotseat"
   gem.license = "MIT"
-  gem.summary = %Q{A CouchDB-based Queue in Ruby}
+  gem.summary = %Q{Add work queue functionality to an existing CouchDB database}
   #gem.description = %Q{TODO: longer description of your gem}
   gem.email = "eladkehat@gmail.com"
   gem.authors = ["Elad Kehat"]
