@@ -32,6 +32,10 @@ module Hotseat
       "#{config[:design_doc_name]}/#{config[:pending_view_name]}"
     end
 
+    def locked_view_name
+      "#{config[:design_doc_name]}/#{config[:locked_view_name]}"
+    end
+
     def design_doc
       q = "doc.#{config[:object_name]}"
       lock = "#{q}.lock"
