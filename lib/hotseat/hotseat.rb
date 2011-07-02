@@ -7,28 +7,28 @@ module Hotseat
     end
     alias :make_queue :queue
 
-    def queue?(db, config=CONFIG)
+    def queue?(db)
       # ignore system dbs like _replicator and _users
       return false if db.name =~ /^_/
       begin
-        db.get design_doc_id(config)
+        db.get design_doc_id
       rescue RestClient::ResourceNotFound
       # either the database or the design doc does not exist
         false
       end
     end
 
-    def queues(couch_server, config=CONFIG)
+    def queues(couch_server)
       couch_server.databases.select do |db|
-        queue?(couch_server.database(db), config)
+        queue?(couch_server.database(db))
       end
     end
 
-    def design_doc_id(config=CONFIG)
+    def design_doc_id
       "_design/#{config[:design_doc_name]}"
     end
 
-    def design_doc(config=CONFIG)
+    def design_doc
       {
         '_id' => "_design/#{config[:design_doc_name]}",
         :views => {
@@ -42,12 +42,17 @@ module Hotseat
       }
     end
 
+    def config
+      CONFIG
+    end
+
   end
 
   CONFIG = {
     :design_doc_name => 'hotseat_queue',
     :pending_view_name => 'pending',
     :locked_view_name => 'locked',
+    :object_name => 'hotseat',
     :default_visibility_timeout => 30_000,
   }
 
