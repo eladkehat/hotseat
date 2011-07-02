@@ -1,2 +1,2 @@
 require 'hotseat/queue'
-require 'hotseat/service'
+require 'hotseat/hotseat'

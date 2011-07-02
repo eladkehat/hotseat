@@ -12,7 +12,7 @@ require 'hotseat'
 # copied and modified from https://github.com/couchrest/couchrest/blob/master/spec/spec_helper.rb
 unless defined?(TESTDB)
   COUCHHOST = ENV['COUCHHOST'] || "http://127.0.0.1:5984"
-  TESTDB = 'hotseat/test'
+  TESTDB = "hotseat%2Ftest"
   TEST_SERVER = CouchRest.new COUCHHOST
   TEST_SERVER.default_database = TESTDB
   DB = TEST_SERVER.database(TESTDB)
@@ -21,6 +21,10 @@ end
 def reset_test_db!
   DB.recreate! rescue nil
   DB
+end
+
+def delete_test_db!
+  DB.delete! rescue nil
 end
 
 RSpec.configure do |config|

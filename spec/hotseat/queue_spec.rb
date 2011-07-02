@@ -3,6 +3,14 @@ require File.expand_path("../../spec_helper", __FILE__)
 module Hotseat
   describe Queue do
 
+    describe "#initialize" do
+      it "should create a Hotseat design doc in the database if one does not exist" do
+        DB.recreate! rescue nil
+        q = Queue.new(DB)
+        q.db.get(Hotseat.design_doc_id).should_not be_nil
+      end
+    end
+
     describe "#add" do
       it "should add a document to the queue"
 
