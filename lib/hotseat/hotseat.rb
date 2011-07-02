@@ -3,7 +3,7 @@ module Hotseat
   class << self
 
     def queue(db)
-      Queue.new(db)
+      Hotseat::Queue.new(db)
     end
     alias :make_queue :queue
 
@@ -28,16 +28,29 @@ module Hotseat
       "_design/#{config[:design_doc_name]}"
     end
 
+    def pending_view_name
+      "#{config[:design_doc_name]}/#{config[:pending_view_name]}"
+    end
+
     def design_doc
+      q = "doc.#{config[:object_name]}"
+      lock = "#{q}.lock"
+      done = "#{q}.done"
+      pending_func = <<-JAVASCRIPT
+function(doc) { if (#{q} && !(#{lock} || #{done})) emit(#{q}.at, null); }
+      JAVASCRIPT
+      locked_func = <<-JAVASCRIPT
+function(doc) { if (#{q} && #{lock}) emit(#{lock}.at, null); }
+      JAVASCRIPT
+      done_func = <<-JAVASCRIPT
+function(doc) { if (#{q} && #{done}) emit(#{done}.at, null); }
+      JAVASCRIPT
       {
         '_id' => "_design/#{config[:design_doc_name]}",
         :views => {
-          config[:pending_view_name] => {
-            :map => "function(doc) { if (!doc.lock) emit(doc.set_at, null);}"
-          },
-          config[:locked_view_name] => {
-            :map => "function(doc) { if (doc.lock) emit(doc.lock.locked_at, null);}"
-          }
+          config[:pending_view_name] => { :map => pending_func.chomp },
+          config[:locked_view_name] => { :map => locked_func.chomp },
+          config[:done_view_name] => { :map => done_func.chomp },
         }
       }
     end
@@ -52,8 +65,8 @@ module Hotseat
     :design_doc_name => 'hotseat_queue',
     :pending_view_name => 'pending',
     :locked_view_name => 'locked',
+    :done_view_name => 'done',
     :object_name => 'hotseat',
-    :default_visibility_timeout => 30_000,
   }
 
 end
