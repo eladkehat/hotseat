@@ -108,6 +108,15 @@ module Hotseat
 
     end
 
+    def num_done
+      @db.view(Hotseat.done_view_name, :limit => 0)['total_rows']
+    end
+
+    def num_all
+      @db.view(Hotseat.all_view_name, :limit => 0)['total_rows']
+    end
+    alias :num_total :num_all
+
     def forget(doc_id)
       @db.update_doc(doc_id) do |doc|
         Queue.unpatch doc

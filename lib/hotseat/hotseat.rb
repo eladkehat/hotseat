@@ -36,6 +36,14 @@ module Hotseat
       "#{config[:design_doc_name]}/#{config[:locked_view_name]}"
     end
 
+    def done_view_name
+      "#{config[:design_doc_name]}/#{config[:done_view_name]}"
+    end
+
+    def all_view_name
+      "#{config[:design_doc_name]}/#{config[:all_view_name]}"
+    end
+
     def design_doc
       q = "doc.#{config[:object_name]}"
       lock = "#{q}.lock"
@@ -49,12 +57,16 @@ function(doc) { if (#{q} && #{lock}) emit(#{lock}.at, null); }
       done_func = <<-JAVASCRIPT
 function(doc) { if (#{q} && #{done}) emit(#{done}.at, null); }
       JAVASCRIPT
+      all_func = <<-JAVASCRIPT
+function(doc) { if (#{q}) emit(#{q}.at, null); }
+      JAVASCRIPT
       {
         '_id' => "_design/#{config[:design_doc_name]}",
         :views => {
           config[:pending_view_name] => { :map => pending_func.chomp },
           config[:locked_view_name] => { :map => locked_func.chomp },
           config[:done_view_name] => { :map => done_func.chomp },
+          config[:all_view_name] => { :map => all_func.chomp },
         }
       }
     end
@@ -70,6 +82,7 @@ function(doc) { if (#{q} && #{done}) emit(#{done}.at, null); }
     :pending_view_name => 'pending',
     :locked_view_name => 'locked',
     :done_view_name => 'done',
+    :all_view_name => 'all',
     :object_name => 'hotseat',
   }
 

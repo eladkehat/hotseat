@@ -241,7 +241,7 @@ module Hotseat
         pending_docs.map{|doc| doc['_id']}.should_not include(@doc_id)
       end
 
-      it "should raise an error if the lock was removed already" do
+      it "should raise an error if the lock was already removed" do
         doc = @leased.first
         @q.remove @doc_id
         expect {
@@ -273,9 +273,83 @@ module Hotseat
     end
 
     describe "#remove_bulk" do
-      it "should remove multiple documents"
+      before(:each) do
+        reset_test_queue!
+        enqueue( create_some_docs(10) )
+        @leased = @q.lease 8
+        @doc_ids = @leased.take(5).map{|doc| doc['_id'] }
+      end
 
+      it "should unlock leased documents" do
+        @q.remove_bulk @doc_ids
+        docs = DB.get_bulk(@doc_ids)['rows'].map{|row| row['doc']}
+        docs.each do |doc|
+          doc.should have_key(Hotseat.config[:object_name])
+          doc[Hotseat.config[:object_name]].should_not have_key('lock')
+        end
+      end
 
+      it "should remove multiple documents from the queue" do
+        @q.remove_bulk @doc_ids
+        pending_docs = @q.get 3 # ensure we get all remaining pending docs
+        (pending_docs.map{|doc| doc['_id']} - @doc_ids).should be_empty
+      end
+
+      it "should report docs whose lock was already removed" do
+        rem_ids = @doc_ids.take(2)
+        @q.remove_bulk rem_ids
+        res = @q.remove_bulk @doc_ids
+        res['errors'].should have(2).errors
+        res['errors'].map{|err| err['id']}.should == rem_ids
+      end
+
+      it "should report docs that are missing from the database" do
+        rem_ids = @doc_ids.take(2)
+        docs = rem_ids.map{|id| @q.db.get(id) }
+        docs.each {|doc| @q.db.delete_doc(doc) }
+        res = @q.remove_bulk @doc_ids
+        res['errors'].should have(2).errors
+        res['errors'].map{|err| err['id']}.should == rem_ids
+      end
+
+      it "should leave queue history in the document (mark as done) by default" do
+        @q.remove_bulk @doc_ids
+        docs = DB.get_bulk(@doc_ids)['rows'].map{|row| row['doc']}
+        docs.each do |doc|
+          doc.should have_key(Hotseat.config[:object_name])
+          doc[Hotseat.config[:object_name]].should have_key('done')
+        end
+      end
+
+      it "should delete queue history from the document when forget=true" do
+        @q.remove_bulk @doc_ids, :forget => true
+        docs = DB.get_bulk(@doc_ids)['rows'].map{|row| row['doc']}
+        docs.each do |doc|
+          doc.should_not have_key(Hotseat.config[:object_name])
+        end
+      end
+    end
+
+    describe "#num_done" do
+      it "should return the number of documents done" do
+        reset_test_queue!
+        enqueue( create_some_docs(10) )
+        @leased = @q.lease 8
+        @doc_ids = @leased.take(5).map{|doc| doc['_id'] }
+        @q.remove_bulk @doc_ids
+        @q.num_done.should == 5
+      end
+    end
+
+    describe "#num_done" do
+      it "should return the total number of documents in the queue" do
+        reset_test_queue!
+        enqueue( create_some_docs(10) )
+        @leased = @q.lease 8
+        @doc_ids = @leased.take(5).map{|doc| doc['_id'] }
+        @q.remove_bulk @doc_ids
+        @q.num_all.should == 10
+      end
     end
 
     describe "#forget" do
@@ -302,7 +376,17 @@ module Hotseat
     end
 
     describe "#purge" do
-      it "should remove all documents from the queue"
+      before do
+        reset_test_queue!
+        enqueue( create_some_docs(10) )
+        leased = @q.lease 5
+        @q.remove_bulk leased.take(2)
+      end
+
+      it "should remove all documents from the queue" do
+        @q.purge
+        @q.num_all.should == 0
+      end
 
     end
   end
