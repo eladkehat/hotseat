@@ -250,7 +250,8 @@ module Hotseat
       end
 
       it "should raise an error if the document is missing from the database" do
-        doc = @leased.first
+        doc_id = @leased.first['_id']
+        doc = @q.db.get(doc_id)
         @q.db.delete_doc(doc)
         expect {
           @q.remove doc['_id']
