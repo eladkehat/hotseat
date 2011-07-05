@@ -230,7 +230,7 @@ module Hotseat
 
       it "should unlock a leased document" do
         @q.remove @doc_id
-        doc = DB.get(doc_id)
+        doc = DB.get(@doc_id)
         doc.should have_key(Hotseat.config[:object_name])
         doc[Hotseat.config[:object_name]].should_not have_key('lock')
       end
@@ -238,7 +238,7 @@ module Hotseat
       it "should remove a document from the queue" do
         @q.remove @doc_id
         pending_docs = @q.get 3 # ensure we get all remaining pending docs
-        pending_docs.map{|doc| doc['_id']}.should_not include(doc_id)
+        pending_docs.map{|doc| doc['_id']}.should_not include(@doc_id)
       end
 
       it "should raise an error if the lock was removed already" do
@@ -259,14 +259,14 @@ module Hotseat
 
       it "should leave queue history in the document (mark as done) by default" do
         @q.remove @doc_id
-        doc = DB.get(doc_id)
+        doc = DB.get(@doc_id)
         doc.should have_key(Hotseat.config[:object_name])
         doc[Hotseat.config[:object_name]].should have_key('done')
       end
 
       it "should delete queue history from the document when forget=true" do
         @q.remove @doc_id, :forget => true
-        doc = DB.get(doc_id)
+        doc = DB.get(@doc_id)
         doc.should_not have_key(Hotseat.config[:object_name])
       end
     end
