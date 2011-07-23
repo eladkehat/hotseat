@@ -104,8 +104,24 @@ module Hotseat
       end
     end
 
-    def remove_bulk(doc_ids)
-
+    def remove_bulk(doc_ids, opts={})
+      rows = @db.bulk_load(doc_ids)['rows']
+      docs, missing = rows.partition {|row| row['doc'] }
+      docs.map! {|row| row['doc'] }
+      locked, unlocked = docs.partition {|doc| Queue.locked? doc }
+      forget = opts.delete(:forget)
+      locked.each do |doc|
+        if forget
+          Queue.unpatch doc
+        else
+          Queue.mark_done( Queue.remove_lock( doc ) )
+        end
+      end
+      @db.bulk_save locked, use_uuids=false
+      {'errors' =>
+        unlocked.map {|doc| {'id' => doc['_id'], 'error' => 'unlocked' } } +
+        missing.map {|row| {'id' => row['key'], 'error' => row['error']} }
+      }
     end
 
     def num_done
@@ -131,7 +147,10 @@ module Hotseat
     end
 
     def purge
-
+      rows = @db.view(Hotseat.all_view_name, :include_docs => true)['rows']
+      docs = rows.map{|row| row['doc']}
+      docs.each{|doc| Queue.unpatch doc }
+      @db.bulk_save docs, use_uuids=false
     end
 
   end

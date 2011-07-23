@@ -292,7 +292,8 @@ module Hotseat
       it "should remove multiple documents from the queue" do
         @q.remove_bulk @doc_ids
         pending_docs = @q.get 3 # ensure we get all remaining pending docs
-        (pending_docs.map{|doc| doc['_id']} - @doc_ids).should be_empty
+        pending_ids = pending_docs.map{|doc| doc['_id'] }
+        (pending_ids - @doc_ids).should eql(pending_ids)
       end
 
       it "should report docs whose lock was already removed" do
@@ -341,7 +342,7 @@ module Hotseat
       end
     end
 
-    describe "#num_done" do
+    describe "#num_all" do
       it "should return the total number of documents in the queue" do
         reset_test_queue!
         enqueue( create_some_docs(10) )
@@ -383,11 +384,11 @@ module Hotseat
         @q.remove_bulk leased.take(2)
       end
 
-      it "should remove all documents from the queue" do
+      it "should remove (and forget) all documents from the queue" do
         @q.purge
         @q.num_all.should == 0
       end
-
     end
   end
+
 end
