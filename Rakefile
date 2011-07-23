@@ -18,7 +18,7 @@ Jeweler::Tasks.new do |gem|
   gem.homepage = "http://github.com/eladkehat/hotseat"
   gem.license = "MIT"
   gem.summary = %Q{Add work queue functionality to an existing CouchDB database}
-  #gem.description = %Q{TODO: longer description of your gem}
+  #gem.description = %Q{longer description of the gem}
   gem.email = "eladkehat@gmail.com"
   gem.authors = ["Elad Kehat"]
   # dependencies defined in Gemfile
