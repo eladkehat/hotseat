@@ -7,5 +7,4 @@ group :development do
   gem "yard"
   gem "bundler"
   gem "jeweler"
-  #gem "rcov"
 end
