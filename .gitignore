@@ -1,5 +1,5 @@
 .idea
-# rcov generated
+# simplecov generated
 coverage
 
 # yard generated
