@@ -53,7 +53,7 @@ module Hotseat
         doc.should_not have_key(Hotseat.config[:object_name])
       end
     end
-    
+
     describe "#add_lock" do
       it "should add a lock object on a patched document" do
         doc = Queue.add_lock( Queue.patch( sample_doc ) )
@@ -72,7 +72,7 @@ module Hotseat
         @doc.should have_key(Hotseat.config[:object_name])
       end
     end
-    
+
     describe "#locked?" do
       it "should be true for a locked document" do
         doc = Queue.add_lock( Queue.patch( sample_doc ) )
@@ -87,7 +87,7 @@ module Hotseat
         Queue.locked?(doc).should be_false
       end
     end
-    
+
     describe "#mark_done" do
       before(:each) { @doc = Queue.mark_done( Queue.patch( sample_doc ) ) }
       it "should leave the queue patch intact" do
@@ -98,13 +98,26 @@ module Hotseat
         patch.should have_key('done')
       end
     end
-    
+
     describe "#add" do
-      it "should add a document to the queue, given a doc id" do
+      before(:each) do
         reset_test_queue!
-        doc_id = DB.save_doc(sample_doc)['id']
-        @q.add doc_id
-        DB.get(doc_id).should have_key(Hotseat.config[:object_name])
+        @doc_id = DB.save_doc(sample_doc)['id']
+      end
+
+      it "should add a document to the queue, given a doc id" do
+        @q.add @doc_id
+        DB.get(@doc_id).should have_key(Hotseat.config[:object_name])
+      end
+
+      it "should save changes made in the block" do
+        @q.add(@doc_id) do |doc|
+          doc['field'] = 'changed value'
+          doc['another_field'] = 'another value'
+        end
+        doc = DB.get(@doc_id)
+        doc['field'].should == 'changed value'
+        doc['another_field'].should == 'another value'
       end
     end
 
@@ -269,6 +282,16 @@ module Hotseat
         @q.remove @doc_id, :forget => true
         doc = DB.get(@doc_id)
         doc.should_not have_key(Hotseat.config[:object_name])
+      end
+
+      it "should save any changes made in the block" do
+        @q.remove(@doc_id) do |doc|
+          doc['field'] = 'changed value'
+          doc['another_field'] = 'another value'
+        end
+        doc = DB.get(@doc_id)
+        doc['field'].should == 'changed value'
+        doc['another_field'].should == 'another value'
       end
     end
 

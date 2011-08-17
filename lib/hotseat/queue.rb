@@ -54,7 +54,10 @@ module Hotseat
     end
 
     def add(doc_id)
-      @db.update_doc(doc_id) {|doc| Queue.patch doc }
+      @db.update_doc(doc_id) do |doc|
+        Queue.patch doc
+        yield doc if block_given?
+      end
     end
 
     def add_bulk(doc_ids)
@@ -101,6 +104,7 @@ module Hotseat
         else
           Queue.mark_done( Queue.remove_lock( doc ) )
         end
+        yield doc if block_given?
       end
     end
 
