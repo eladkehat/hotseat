@@ -2,6 +2,8 @@
 
 Add work queue functionality to an existing CouchDB database.
 
+`gem install hotseat`
+
 == Contributing to Hotseat
  
 * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet

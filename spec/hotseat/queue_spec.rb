@@ -28,19 +28,23 @@ module Hotseat
       it "should create a Hotseat design doc in the database if one does not exist" do
         reset_test_db!
         q = Hotseat::Queue.new(DB)
-        q.db.get(Hotseat.design_doc_id).should_not be_nil
+        q.db.get(q.design_doc_id).should_not be_nil
       end
     end
 
     describe "#patch" do
+      before(:each) do
+        reset_test_queue!
+      end
+
       it "should add a queue object on a document" do
         doc = sample_doc
-        Queue.patch doc
-        doc.should have_key(Hotseat.config[:object_name])
+        @q.patch doc
+        doc.should have_key(@q.config[:object_name])
       end
 
       it "should return the patched document with original data intact" do
-        doc = Queue.patch sample_doc
+        doc = @q.patch sample_doc
         sample_doc.each do |k,v|
           doc[k].should == v
         end
@@ -49,52 +53,63 @@ module Hotseat
 
     describe "#unpatch" do
       it "should remove the queue object from a document" do
-        doc = Queue.unpatch( Queue.patch( sample_doc ) )
-        doc.should_not have_key(Hotseat.config[:object_name])
+        reset_test_queue!
+        doc = @q.unpatch( @q.patch( sample_doc ) )
+        doc.should_not have_key(@q.config[:object_name])
       end
     end
 
     describe "#add_lock" do
       it "should add a lock object on a patched document" do
-        doc = Queue.add_lock( Queue.patch( sample_doc ) )
-        patch = doc[Hotseat.config[:object_name]]
+        reset_test_queue!
+        doc = @q.add_lock( @q.patch( sample_doc ) )
+        patch = doc[@q.config[:object_name]]
         patch.should have_key('lock')
       end
     end
 
     describe "#remove_lock" do
-      before(:each) { @doc = Queue.remove_lock( Queue.add_lock( Queue.patch( sample_doc ) ) ) }
+      before(:each) do
+        reset_test_queue!
+        @doc = @q.remove_lock( @q.add_lock( @q.patch( sample_doc ) ) ) 
+      end
       it "should remove a lock object added by #add_lock" do
-        patch = @doc[Hotseat.config[:object_name]]
+        patch = @doc[@q.config[:object_name]]
         patch.should_not have_key('lock')
       end
       it "should leave the queue patch intact" do
-        @doc.should have_key(Hotseat.config[:object_name])
+        @doc.should have_key(@q.config[:object_name])
       end
     end
 
     describe "#locked?" do
+      before(:each) do
+        reset_test_queue!
+      end
       it "should be true for a locked document" do
-        doc = Queue.add_lock( Queue.patch( sample_doc ) )
-        Queue.locked?(doc).should be_true
+        doc = @q.add_lock( @q.patch( sample_doc ) )
+        @q.locked?(doc).should be_true
       end
       it "should be false for a patched, but not locked document" do
-        doc = Queue.patch( sample_doc )
-        Queue.locked?(doc).should be_false
+        doc = @q.patch( sample_doc )
+        @q.locked?(doc).should be_false
       end
       it "should be false for an unlocked document" do
-        doc = Queue.remove_lock( Queue.add_lock( Queue.patch( sample_doc ) ) )
-        Queue.locked?(doc).should be_false
+        doc = @q.remove_lock( @q.add_lock( @q.patch( sample_doc ) ) )
+        @q.locked?(doc).should be_false
       end
     end
 
     describe "#mark_done" do
-      before(:each) { @doc = Queue.mark_done( Queue.patch( sample_doc ) ) }
+      before(:each) do
+        reset_test_queue!
+        @doc = @q.mark_done( @q.patch( sample_doc ) )
+      end
       it "should leave the queue patch intact" do
-        @doc.should have_key(Hotseat.config[:object_name])
+        @doc.should have_key(@q.config[:object_name])
       end
       it "should add a 'done' object on a patched document" do
-        patch = @doc[Hotseat.config[:object_name]]
+        patch = @doc[@q.config[:object_name]]
         patch.should have_key('done')
       end
     end
@@ -107,7 +122,7 @@ module Hotseat
 
       it "should add a document to the queue, given a doc id" do
         @q.add @doc_id
-        DB.get(@doc_id).should have_key(Hotseat.config[:object_name])
+        DB.get(@doc_id).should have_key(@q.config[:object_name])
       end
 
       it "should save changes made in the block" do
@@ -127,7 +142,7 @@ module Hotseat
         doc_ids = create_some_docs
         @q.add_bulk doc_ids
         doc_ids.each do |doc_id|
-          DB.get(doc_id).should have_key(Hotseat.config[:object_name])
+          DB.get(doc_id).should have_key(@q.config[:object_name])
         end
       end
     end
@@ -153,15 +168,15 @@ module Hotseat
         docs.each do |doc|
           db_doc = DB.get(doc['_id'])
           db_doc.should be_kind_of CouchRest::Document
-          db_doc.should have_key(Hotseat.config[:object_name])
+          db_doc.should have_key(@q.config[:object_name])
         end
       end
 
       it "should lock a pending document" do
         doc_id = @q.lease.first['_id']
         doc = DB.get(doc_id)
-        doc.should have_key(Hotseat.config[:object_name])
-        doc[Hotseat.config[:object_name]].should have_key('lock')
+        doc.should have_key(@q.config[:object_name])
+        doc[@q.config[:object_name]].should have_key('lock')
       end
 
       it "should lock and return up to the specified number of documents" do
@@ -194,7 +209,7 @@ module Hotseat
 
       it "should not be pending" do
         locked_id = @q.lease.first['_id']
-        pending_ids = @q.db.view(Hotseat.pending_view_name)['rows'].map{|row| row['id']}
+        pending_ids = @q.db.view(@q.pending_view_name)['rows'].map{|row| row['id']}
         pending_ids.should_not include(locked_id)
       end
 
@@ -216,15 +231,15 @@ module Hotseat
         docs.should have(2).items
         docs.each do |doc|
           db_doc = DB.get(doc['_id'])
-          db_doc.should have_key(Hotseat.config[:object_name])
+          db_doc.should have_key(@q.config[:object_name])
         end
       end
 
       it "should not lock the documents it returns" do
         doc_id = @q.get.first['_id']
         doc = DB.get(doc_id)
-        doc.should have_key(Hotseat.config[:object_name])
-        doc[Hotseat.config[:object_name]].should_not have_key('lock')
+        doc.should have_key(@q.config[:object_name])
+        doc[@q.config[:object_name]].should_not have_key('lock')
       end
 
       it "should return up to the specified number of documents" do
@@ -244,8 +259,8 @@ module Hotseat
       it "should unlock a leased document" do
         @q.remove @doc_id
         doc = DB.get(@doc_id)
-        doc.should have_key(Hotseat.config[:object_name])
-        doc[Hotseat.config[:object_name]].should_not have_key('lock')
+        doc.should have_key(@q.config[:object_name])
+        doc[@q.config[:object_name]].should_not have_key('lock')
       end
 
       it "should remove a document from the queue" do
@@ -274,14 +289,14 @@ module Hotseat
       it "should leave queue history in the document (mark as done) by default" do
         @q.remove @doc_id
         doc = DB.get(@doc_id)
-        doc.should have_key(Hotseat.config[:object_name])
-        doc[Hotseat.config[:object_name]].should have_key('done')
+        doc.should have_key(@q.config[:object_name])
+        doc[@q.config[:object_name]].should have_key('done')
       end
 
       it "should delete queue history from the document when forget=true" do
         @q.remove @doc_id, :forget => true
         doc = DB.get(@doc_id)
-        doc.should_not have_key(Hotseat.config[:object_name])
+        doc.should_not have_key(@q.config[:object_name])
       end
 
       it "should save any changes made in the block" do
@@ -307,8 +322,8 @@ module Hotseat
         @q.remove_bulk @doc_ids
         docs = DB.get_bulk(@doc_ids)['rows'].map{|row| row['doc']}
         docs.each do |doc|
-          doc.should have_key(Hotseat.config[:object_name])
-          doc[Hotseat.config[:object_name]].should_not have_key('lock')
+          doc.should have_key(@q.config[:object_name])
+          doc[@q.config[:object_name]].should_not have_key('lock')
         end
       end
 
@@ -340,8 +355,8 @@ module Hotseat
         @q.remove_bulk @doc_ids
         docs = DB.get_bulk(@doc_ids)['rows'].map{|row| row['doc']}
         docs.each do |doc|
-          doc.should have_key(Hotseat.config[:object_name])
-          doc[Hotseat.config[:object_name]].should have_key('done')
+          doc.should have_key(@q.config[:object_name])
+          doc[@q.config[:object_name]].should have_key('done')
         end
       end
 
@@ -349,7 +364,7 @@ module Hotseat
         @q.remove_bulk @doc_ids, :forget => true
         docs = DB.get_bulk(@doc_ids)['rows'].map{|row| row['doc']}
         docs.each do |doc|
-          doc.should_not have_key(Hotseat.config[:object_name])
+          doc.should_not have_key(@q.config[:object_name])
         end
       end
     end
@@ -383,7 +398,7 @@ module Hotseat
         doc_id = @q.get.first['_id']
         @q.forget doc_id
         doc = DB.get(doc_id)
-        doc.should_not have_key(Hotseat.config[:object_name])
+        doc.should_not have_key(@q.config[:object_name])
       end
     end
 
@@ -394,7 +409,7 @@ module Hotseat
         doc_ids = @q.get(3).map{|doc| doc['_id'] }
         @q.forget_bulk doc_ids
         @q.db.bulk_load(doc_ids)['rows'].map{|row| row['doc']}.each do |doc|
-          doc.should_not have_key(Hotseat.config[:object_name])
+          doc.should_not have_key(@q.config[:object_name])
         end
       end
     end
@@ -412,6 +427,9 @@ module Hotseat
         @q.num_all.should == 0
       end
     end
-  end
 
+    context "when two queues are defined on the same DB" do
+
+    end
+  end
 end
