@@ -2,8 +2,8 @@ module Hotseat
 
   class << self
 
-    def queue(db)
-      Hotseat::Queue.new(db)
+    def queue(db, options={})
+      Hotseat::Queue.new(db, options)
     end
     alias :make_queue :queue
 

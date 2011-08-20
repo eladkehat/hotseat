@@ -429,7 +429,31 @@ module Hotseat
     end
 
     context "when two queues are defined on the same DB" do
+      before do
+        reset_test_db!
+        @doc_ids = create_some_docs(10)
+        @q1 = Hotseat.make_queue(DB, :design_doc_name => 'hotseat1_queue', :object_name => 'hotseat1')
+        @q2 = Hotseat.make_queue(DB, :design_doc_name => 'hotseat2_queue', :object_name => 'hotseat2')
+      end
 
+      it "#add should add a doc to the specified queue only" do
+        @q1.add @doc_ids[0]
+        @q2.add @doc_ids[1]
+        DB.get(@doc_ids[0]).should have_key(@q1.config[:object_name])
+        DB.get(@doc_ids[0]).should_not have_key(@q2.config[:object_name])
+        DB.get(@doc_ids[1]).should have_key(@q2.config[:object_name])
+        DB.get(@doc_ids[1]).should_not have_key(@q1.config[:object_name])
+      end
+
+      it "#lease should lease docs from the specified queue" do
+        @q1.add_bulk @doc_ids[0, 5]
+        @q2.add_bulk @doc_ids[5, 5]
+        doc1 = @q1.lease.first
+        @doc_ids[0, 5].should include(doc1['_id'])
+        @q2.lease(3).each do |doc|
+          @doc_ids[5, 5].should include(doc['_id'])
+        end
+      end
     end
   end
 end
