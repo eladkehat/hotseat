@@ -248,6 +248,55 @@ module Hotseat
       end
     end
 
+    describe "#unlease" do
+      before(:each) do
+        reset_test_queue!
+        enqueue( create_some_docs(3) )
+        @leased = @q.lease 2
+        @doc_id = @leased.first['_id']
+      end
+
+      it "should unlock a leased document" do
+        @q.unlease @doc_id
+        doc = DB.get(@doc_id)
+        doc.should have_key(@q.config[:object_name])
+        doc[@q.config[:object_name]].should_not have_key('lock')
+      end
+
+      it "should leave the document in the queue" do
+        @q.unlease @doc_id
+        pending_docs = @q.get 3 # ensure we get all remaining pending docs
+        pending_docs.map{|doc| doc['_id']}.should include(@doc_id)
+      end
+
+      it "should raise an error if the lock was already removed" do
+        doc = @leased.first
+        @q.unlease @doc_id
+        expect {
+          @q.unlease @doc_id
+        }.to raise_error(Hotseat::QueueError)
+      end
+
+      it "should raise an error if the document is missing from the database" do
+        doc_id = @leased.first['_id']
+        doc = @q.db.get(doc_id)
+        @q.db.delete_doc(doc)
+        expect {
+          @q.unlease doc['_id']
+        }.to raise_error
+      end
+
+      it "should save any changes made in the block" do
+        @q.unlease(@doc_id) do |doc|
+          doc['field'] = 'changed value'
+          doc['another_field'] = 'another value'
+        end
+        doc = DB.get(@doc_id)
+        doc['field'].should == 'changed value'
+        doc['another_field'].should == 'another value'
+      end
+    end
+
     describe "#remove" do
       before(:each) do
         reset_test_queue!

@@ -149,6 +149,14 @@ module Hotseat
       @db.view(locked_view_name, :limit => 0)['total_rows']
     end
 
+    def unlease(doc_id)
+      @db.update_doc(doc_id) do |doc|
+        raise(QueueError, "Document is already unlocked") unless locked?(doc)
+        remove_lock doc
+        yield doc if block_given?
+      end
+    end
+
     def remove(doc_id, opts={})
       @db.update_doc(doc_id) do |doc|
         raise(QueueError, "Document was already removed") unless locked?(doc)
