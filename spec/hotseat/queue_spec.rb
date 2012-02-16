@@ -114,6 +114,27 @@ module Hotseat
       end
     end
 
+    describe "#done?" do
+      before(:each) do
+        reset_test_queue!
+      end
+      it "should be true if the document was marked as done" do
+        doc = @q.mark_done( @q.patch( sample_doc ) )
+        @q.done?(doc).should be_true
+      end
+      it "should be false for a patched document that was not marked as done" do
+        doc = @q.patch( sample_doc )
+        @q.done?(doc).should be_false
+      end
+      it "should be false for a locked document" do
+        doc = @q.add_lock( @q.patch( sample_doc ) )
+        @q.done?(doc).should be_false
+      end
+      it "should be false for an un-patched document (not part of the queue)" do
+        @q.done?(sample_doc).should be_false
+      end
+    end
+
     describe "#add" do
       before(:each) do
         reset_test_queue!
@@ -415,6 +436,62 @@ module Hotseat
         docs.each do |doc|
           doc.should_not have_key(@q.config[:object_name])
         end
+      end
+    end
+
+    describe "#undo" do
+      before(:all) do
+        reset_test_queue!
+        doc_ids = create_some_docs(3)
+        enqueue doc_ids
+        @done_ids = [doc_ids[1]]
+        @undone_ids = [doc_ids[0], doc_ids[2]]
+        @done_ids.each do |done_id|
+          done_doc = DB.get done_id
+          @q.mark_done done_doc
+          done_doc.save
+        end
+      end
+
+      it "should mark the done document as pending again" do
+        @q.undo @done_ids.first
+        done_doc = DB.get @done_ids.first
+        patch = done_doc[@q.config[:object_name]]
+        patch.should_not have_key('done')
+        patch.should_not have_key('lock')
+      end
+
+      it "should raise an error if the document is not done" do
+        undone_doc = DB.get @undone_ids.first
+        expect {
+          @q.undo @undone_ids.first
+        }.to raise_error(Hotseat::QueueError)
+      end
+    end
+
+    describe "#undo_bulk" do
+      before(:each) do
+        reset_test_queue!
+        doc_ids = create_some_docs(5)
+        enqueue doc_ids
+        @done_docs = doc_ids[0..2].map{|id| DB.get id }
+        @done_docs.each do |doc|
+          @q.mark_done doc
+          doc.save
+        end
+      end
+
+      it "should mark all 'done' documents as pending again" do
+        @q.undo_bulk @done_docs.map{|doc| doc['_id']}
+        @q.num_done.should == 0
+        @q.num_pending.should == 5
+      end
+
+      it "should leave not-done documents intact" do
+        @q.lease
+        @q.undo_bulk @done_docs.map{|doc| doc['_id']}
+        @q.num_locked.should == 1
+        @q.num_pending.should == 4
       end
     end
 

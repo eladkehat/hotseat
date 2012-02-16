@@ -106,6 +106,12 @@ module Hotseat
       doc
     end
 
+    def done?(doc)
+      if obj = doc[config[:object_name]]
+        obj.has_key? 'done'
+      end
+    end
+
     def add(doc_id)
       @db.update_doc(doc_id) do |doc|
         patch doc
@@ -187,6 +193,26 @@ module Hotseat
         unlocked.map {|doc| {'id' => doc['_id'], 'error' => 'unlocked' } } +
         missing.map {|row| {'id' => row['key'], 'error' => row['error']} }
       }
+    end
+
+    def undo(doc_id)
+      @db.update_doc(doc_id) do |doc|
+        raise(QueueError, "Document is not done") unless done?(doc)
+        obj = doc[config[:object_name]]
+        obj.delete 'done'
+      end
+    end
+
+    def undo_bulk(doc_ids)
+      rows = @db.bulk_load(doc_ids)['rows']
+      docs, missing = rows.partition {|row| row['doc'] }
+      docs.map! {|row| row['doc'] }
+      done, not_done = docs.partition {|doc| done? doc }
+      done.each do |doc|
+        obj = doc[config[:object_name]]
+        obj.delete 'done'
+      end
+      @db.bulk_save done, use_uuids=false
     end
 
     def num_done
