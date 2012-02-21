@@ -131,14 +131,14 @@ module Hotseat
     end
     alias :size :num_pending
 
-    def get(n=1, as_stack=false)
-      params = {:limit => n, :include_docs => true, :descending => as_stack}
+    def get(n=1, options={})
+      params = {:limit => n, :include_docs => true}.merge(options)
       rows = @db.view(pending_view_name, params)['rows']
       rows.map{|row| row['doc']} unless rows.empty?
     end
 
-    def lease(n=1)
-      if docs = get(n)
+    def lease(n=1, query_options={})
+      if docs = get(n, query_options)
         docs.each {|doc| add_lock doc }
         response = @db.bulk_save docs, use_uuids=false
         # Some docs may have failed to lock - probably updated by another process
