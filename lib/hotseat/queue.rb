@@ -131,8 +131,9 @@ module Hotseat
     end
     alias :size :num_pending
 
-    def get(n=1)
-      rows = @db.view(pending_view_name, :limit => n, :include_docs => true)['rows']
+    def get(n=1, as_stack=false)
+      params = {:limit => n, :include_docs => true, :descending => as_stack}
+      rows = @db.view(pending_view_name, params)['rows']
       rows.map{|row| row['doc']} unless rows.empty?
     end
 
