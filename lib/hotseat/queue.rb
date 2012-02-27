@@ -164,6 +164,21 @@ module Hotseat
       end
     end
 
+    def unlease_bulk(doc_ids)
+      rows = @db.bulk_load(doc_ids)['rows']
+      docs, missing = rows.partition {|row| row['doc'] }
+      docs.map! {|row| row['doc'] }
+      locked, unlocked = docs.partition {|doc| locked? doc }
+      locked.each do |doc|
+        remove_lock( doc )
+      end
+      @db.bulk_save locked, use_uuids=false
+      {'errors' =>
+        unlocked.map {|doc| {'id' => doc['_id'], 'error' => 'unlocked' } } +
+        missing.map {|row| {'id' => row['key'], 'error' => row['error']} }
+      }
+    end
+
     def remove(doc_id, opts={})
       @db.update_doc(doc_id) do |doc|
         raise(QueueError, "Document was already removed") unless locked?(doc)

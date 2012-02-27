@@ -318,6 +318,41 @@ module Hotseat
       end
     end
 
+    describe "#unlease_bulk" do
+      before(:each) do
+        reset_test_queue!
+        enqueue( create_some_docs(10) )
+        @leased = @q.lease 8
+        @doc_ids = @leased.take(5).map{|doc| doc['_id'] }
+      end
+
+      it "should unlock multiple leased documents" do
+        @q.unlease_bulk @doc_ids
+        docs = DB.get_bulk(@doc_ids)['rows'].map{|row| row['doc']}
+        docs.each do |doc|
+          doc.should have_key(@q.config[:object_name])
+          doc[@q.config[:object_name]].should_not have_key('lock')
+        end
+      end
+
+      it "should report docs whose lock was already removed" do
+        rem_ids = @doc_ids.take(2)
+        @q.unlease_bulk rem_ids
+        res = @q.unlease_bulk @doc_ids
+        res['errors'].should have(2).errors
+        res['errors'].map{|err| err['id']}.should == rem_ids
+      end
+
+      it "should report docs that are missing from the database" do
+        rem_ids = @doc_ids.take(2)
+        docs = rem_ids.map{|id| @q.db.get(id) }
+        docs.each {|doc| @q.db.delete_doc(doc) }
+        res = @q.unlease_bulk @doc_ids
+        res['errors'].should have(2).errors
+        res['errors'].map{|err| err['id']}.should == rem_ids
+      end
+    end
+
     describe "#remove" do
       before(:each) do
         reset_test_queue!
