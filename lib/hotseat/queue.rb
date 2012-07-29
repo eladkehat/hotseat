@@ -126,6 +126,11 @@ module Hotseat
       @db.bulk_save docs, use_uuids=false
     end
 
+    def create_and_add_bulk(docs)
+      docs.each {|doc| patch doc }
+      @db.bulk_save docs
+    end
+
     def num_pending
       @db.view(pending_view_name, :limit => 0)['total_rows']
     end
