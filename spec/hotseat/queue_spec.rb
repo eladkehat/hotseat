@@ -353,6 +353,24 @@ module Hotseat
       end
     end
 
+    describe "#unlease_all" do
+      before(:each) do
+        reset_test_queue!
+        enqueue( create_some_docs(10) )
+        @leased = @q.lease 8
+        @doc_ids = @leased.map{|doc| doc['_id'] }
+      end
+
+      it "should unlock all leased documents" do
+        @q.unlease_all
+        docs = DB.get_bulk(@doc_ids)['rows'].map{|row| row['doc']}
+        docs.each do |doc|
+          doc.should have_key(@q.config[:object_name])
+          doc[@q.config[:object_name]].should_not have_key('lock')
+        end
+      end
+    end
+
     describe "#remove" do
       before(:each) do
         reset_test_queue!

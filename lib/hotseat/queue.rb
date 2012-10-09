@@ -179,6 +179,11 @@ module Hotseat
       }
     end
 
+    def unlease_all
+      doc_ids = db.view(locked_view_name)['rows'].map {|doc| doc['id'] }
+      unlease_bulk doc_ids
+    end
+
     def remove(doc_id, opts={})
       @db.update_doc(doc_id) do |doc|
         raise(QueueError, "Document was already removed") unless locked?(doc)
