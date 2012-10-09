@@ -20,6 +20,13 @@ module Hotseat
       (1..n).map {|i| DB.save_doc(sample_doc(i))['id'] }
     end
 
+    # Returns unsaved new docs
+    def create_new_docs(n=3)
+      docs=[]
+      (1..n).each {|i| docs<<sample_doc(i)}
+      docs
+    end
+
     def enqueue(doc_ids)
       @q.add_bulk doc_ids
     end
@@ -164,6 +171,17 @@ module Hotseat
         @q.add_bulk doc_ids
         doc_ids.each do |doc_id|
           DB.get(doc_id).should have_key(@q.config[:object_name])
+        end
+      end
+    end
+
+    describe "#create_and_add_bulk" do
+      it "should add multiple documents in bulk, given multiple new docs" do
+        reset_test_queue!
+        docs = create_new_docs
+        result=@q.create_and_add_bulk docs
+        result.each do |row|
+          DB.get(row["id"]).should have_key(@q.config[:object_name])
         end
       end
     end
